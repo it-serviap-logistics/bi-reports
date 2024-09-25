@@ -1,31 +1,64 @@
-import { Menu, Transition } from '@headlessui/react';
+import {
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuItems,
+  Transition,
+} from '@headlessui/react';
 import { classNames } from '../../utils';
 import { Bars3Icon, BellIcon } from '@heroicons/react/24/outline';
 import {
   ChevronDownIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/20/solid';
-import { Dispatch, Fragment, SetStateAction } from 'react';
+import { Fragment } from 'react';
 import IMAGES from '../../images/urls';
-
-const userNavigation = [
-  { name: 'Your profile', href: '#' },
-  { name: 'Sign out', href: '#' },
-];
+import { useMsal } from '@azure/msal-react';
+import { ENVIROMENT } from '../../settings/enviroment';
 
 export default function Topbar(props: {
   showSideBar: boolean;
-  setShowSideBar: Dispatch<SetStateAction<boolean>>;
+  onChangeShowSideBar: (open: boolean) => void;
 }) {
-  const { setShowSideBar } = props;
+  const { onChangeShowSideBar } = props;
+  const { instance, accounts } = useMsal();
+
+  const logout = async () => {
+    try {
+      const activeAccount = instance.getActiveAccount() || accounts[0];
+      if (activeAccount) {
+        await instance.logoutPopup({
+          account: activeAccount,
+          postLogoutRedirectUri: ENVIROMENT.MS_LOGOUT_URI,
+        });
+      }
+    } catch (error) {
+      console.log('Error during logout...');
+      console.error(error);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
+  const handleProfile = () => {};
+
+  const userNavigation = [
+    { name: 'Your profile', action: handleProfile },
+    { name: 'Sign out', action: handleLogout },
+  ];
+
+  const handleShowSideBar = () => onChangeShowSideBar(true);
+
   return (
     <>
       {/* Navbar */}
-      <nav className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8 lg:pl-72">
+      <nav className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8 lg:pl-72">
         <button
           type="button"
           className="-m-2.5 p-2.5 text-gray-700 lg:hidden"
-          onClick={() => setShowSideBar(true)}
+          onClick={handleShowSideBar}
         >
           <span className="sr-only">Open sidebar</span>
           <Bars3Icon className="h-6 w-6" aria-hidden="true" />
@@ -68,7 +101,7 @@ export default function Topbar(props: {
 
             {/* Profile dropdown */}
             <Menu as="div" className="relative">
-              <Menu.Button className="-m-1.5 flex items-center p-1.5">
+              <MenuButton className="-m-1.5 flex items-center p-1.5">
                 <span className="sr-only">Open user menu</span>
                 <img
                   className="h-8 w-8 rounded-full bg-gray-50"
@@ -87,7 +120,7 @@ export default function Topbar(props: {
                     aria-hidden="true"
                   />
                 </span>
-              </Menu.Button>
+              </MenuButton>
               <Transition
                 as={Fragment}
                 enter="transition ease-out duration-100"
@@ -97,23 +130,23 @@ export default function Topbar(props: {
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
               >
-                <Menu.Items className="absolute right-0 z-10 mt-2.5 w-32 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none">
+                <MenuItems className="absolute right-0 z-10 mt-2.5 w-32 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none">
                   {userNavigation.map((item) => (
-                    <Menu.Item key={item.name}>
+                    <MenuItem key={item.name}>
                       {({ active }) => (
-                        <a
-                          href={item.href}
+                        <button
                           className={classNames(
                             active ? 'bg-gray-50' : '',
                             'block px-3 py-1 text-sm leading-6 text-gray-900',
                           )}
+                          onClick={item.action}
                         >
                           {item.name}
-                        </a>
+                        </button>
                       )}
-                    </Menu.Item>
+                    </MenuItem>
                   ))}
-                </Menu.Items>
+                </MenuItems>
               </Transition>
             </Menu>
           </div>
